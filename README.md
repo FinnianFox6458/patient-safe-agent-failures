@@ -1,12 +1,12 @@
 # Patient-safe failure tracking for an appointment agent
 
-Start by running the focused decision tests:
+Run the focused decision tests first:
 
 ```bash
 cargo test
 ```
 
-The medication-risk case needs to pick `notify_operations` with the `patient-safety` queue, and its capture record must drop the supplied patient name and contact. The calendar case should schedule attempt 3 rather than alerting operations.
+The medication-risk case must choose `notify_operations` with the `patient-safety` queue, while its capture record excludes the supplied patient name and contact. The calendar case must schedule attempt 3 instead of alerting operations.
 
 ## Run the service
 
@@ -33,17 +33,17 @@ Expected response:
 
 ## Operational boundary
 
-The capture record holds the opaque appointment reference, stage, attempt, stable fingerprint, and exception class. Patient name and contact stay inside the service request and never enter the observability payload. That is the core safety boundary here.
+The capture record contains the opaque appointment reference, stage, attempt, stable fingerprint, and exception class. Patient name and contact stay inside the service request and are never placed in the observability payload. This is the main safety boundary in the example.
 
-Medication risk and consent mismatch notify the `patient-safety` queue. Calendar availability gets at most three attempts; an exhausted calendar attempt or invalid agent output goes to `appointment-review`. These choices live in `appointment_guard.rs` and are deterministic.
+Medication risk and consent mismatch notify the `patient-safety` queue. Calendar availability gets at most three attempts; an exhausted calendar attempt or invalid agent output goes to `appointment-review`. These decisions live in `appointment_guard.rs` and are deterministic.
 
-Every outbound request sets `POST` explicitly and carries an idempotency key derived from appointment, stage, and attempt. The client decodes the Infrai envelope before trusting HTTP status, surfaces the structured rejection, and backs off on HTTP 429 while honoring `Retry-After`.
+Every outbound request sets `POST` explicitly and carries an idempotency key derived from appointment, stage, and attempt. The client decodes the Infrai envelope before considering HTTP status, surfaces its structured rejection, and backs off on HTTP 429 while honoring `Retry-After`.
 
-The executable shows the decision and capture boundary. Queue delivery is represented by the returned action so a deployment can wire its existing patient-operations channel.
+The executable demonstrates the decision and capture boundary. Queue delivery itself is represented by the returned action so a deployment can connect its existing patient-operations channel.
 
 ## Before you deploy: Patient Safe Agent Failures
 
-The snippet above is copy-paste simple. Before shipping, a few **required** steps: the notes below apply to Patient Safe Agent Failures.
+The snippet above stays copy-paste simple. Before you ship, a few **required** steps: The details below apply to Patient Safe Agent Failures.
 
 **Account & key**
 
